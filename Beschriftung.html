@@ -65,13 +65,13 @@
         .label-main-row input[type="text"] { flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; height: 35px; }
         
         /* Custom Dropdown Styling (Offline Ersatz für Tom Select) */
-        .custom-select-btn { padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; background: white; font-size: 13.5px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; height: 35px; display: flex; align-items: center; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05); }
+        .custom-select-btn { padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; background: white; font-size: 13.5px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; height: 35px; display: flex; align-items: center; gap: 6px; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05); }
         .custom-select-btn:hover { border-color: #999; }
         .custom-select-menu { position: absolute; width: 250px; background: white; border: 1px solid #ccc; box-shadow: 0 5px 15px rgba(0,0,0,0.2); border-radius: 4px; z-index: 10000; max-height: 350px; overflow-y: auto; display: flex; flex-direction: column; }
         .custom-select-search { padding: 8px; border-bottom: 1px solid #ddd; position: sticky; top: 0; background: #f8f9fa; z-index: 10; }
         .custom-select-search input { width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
         .custom-optgroup { font-weight: bold; padding: 6px 10px; background: #e9ecef; color: var(--primary); font-size: 12px; position: sticky; top: 45px; z-index: 9; border-bottom: 1px solid #ddd;}
-        .custom-option { padding: 6px 15px; cursor: pointer; font-size: 13px; color: #333; }
+        .custom-option { padding: 6px 15px; cursor: pointer; font-size: 13px; color: #333; display: flex; align-items: center; gap: 8px;}
         .custom-option:hover { background: var(--primary); color: white; }
 
         .settings-row { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px dashed #ccc; flex-wrap: wrap; gap: 15px; align-items: center; font-size: 13px; }
@@ -519,7 +519,7 @@
         function renderSymbol(sym) {
             if (!sym || sym === '--') return '';
             if (sym.endsWith('.svg')) {
-                return `<span style="display: inline-block; width: 1.1em; height: 1.1em; background-color: currentColor; -webkit-mask: url('icons/${sym}') no-repeat center / contain; mask: url('icons/${sym}') no-repeat center / contain; vertical-align: middle;"></span>`;
+                return `<span style="display: inline-block; width: 1.1em; height: 1.1em; background-color: currentColor; -webkit-mask: url('icons/${sym}') no-repeat center / contain; mask: url('icons/${sym}') no-repeat center / contain; vertical-align: middle; flex-shrink: 0;"></span>`;
             }
             if (sym.startsWith('fa-')) return `<i class="${sym}"></i>`;
             return sym; 
@@ -550,7 +550,19 @@
 
                 const btn = document.createElement('div');
                 btn.className = 'custom-select-btn';
-                btn.innerHTML = selectElement.options[selectElement.selectedIndex]?.text || '-- Nichts --';
+                
+                // Hilfsfunktion zum Setzen von Button-Inhalt (Icon + Text)
+                const updateBtnContent = (val, text) => {
+                    if (val && val !== '--' && val.endsWith('.svg')) {
+                        btn.innerHTML = renderSymbol(val) + `<span>${text}</span>`;
+                    } else {
+                        btn.innerHTML = text;
+                    }
+                };
+
+                const selectedOpt = selectElement.options[selectElement.selectedIndex];
+                updateBtnContent(selectedOpt?.value, selectedOpt?.text || '-- Nichts --');
+
                 wrapper.appendChild(btn);
 
                 btn.onclick = (e) => {
@@ -591,11 +603,18 @@
                                 filteredSyms.forEach(s => {
                                     const opt = document.createElement('div');
                                     opt.className = 'custom-option';
-                                    opt.innerText = s.name;
+                                    
+                                    // Zeige SVG direkt im Menü an, wenn vorhanden
+                                    if (s.val !== '--' && s.val.endsWith('.svg')) {
+                                        opt.innerHTML = renderSymbol(s.val) + `<span>${s.name}</span>`;
+                                    } else {
+                                        opt.innerHTML = s.name;
+                                    }
+
                                     opt.onclick = (ev) => {
                                         ev.stopPropagation();
                                         selectElement.value = s.val;
-                                        btn.innerHTML = s.name;
+                                        updateBtnContent(s.val, s.name);
                                         closeAllCustomMenus();
                                         selectElement.dispatchEvent(new Event('change', { bubbles: true }));
                                     };
@@ -616,7 +635,7 @@
                             const val = searchInput.value.trim();
                             selectElement.innerHTML += `<option value="${val}">${val}</option>`;
                             selectElement.value = val;
-                            btn.innerHTML = val;
+                            updateBtnContent(val, val);
                             closeAllCustomMenus();
                             selectElement.dispatchEvent(new Event('change', { bubbles: true }));
                         }
@@ -1193,7 +1212,7 @@
 
                 // Init Custom Offline Dropdowns
                 initCustomDropdowns();
-            },
+            }
 
             renderPreview() {
                 const preview = document.getElementById('previewArea');
