@@ -114,25 +114,22 @@
         .preview-label { display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; overflow: hidden; }
         .preview-label-text { flex: 1; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: clip; line-height: 0.95; }
 
-        /* Styling für die neuen SVG-Bilder in den kleinen Buttons */
         .icon-btn img {
             width: 16px;
             height: 16px;
-            opacity: 0.6; /* Macht sie dezent grau */
+            opacity: 0.6; 
             transition: 0.2s;
             pointer-events: none;
         }
         
         .icon-btn:hover img {
-            opacity: 1; /* Volle Sichtbarkeit beim Hovern */
+            opacity: 1; 
         }
 
-        /* Färbt das Löschen-Icon rot beim Drüberfahren */
         .icon-btn.delete:hover img {
             filter: invert(27%) sepia(91%) saturate(5353%) hue-rotate(349deg) brightness(92%) contrast(93%);
         }
         
-        /* Färbt das Duplizieren-Icon grün beim Drüberfahren */
         .icon-btn.duplicate:hover img {
             filter: invert(48%) sepia(87%) saturate(1251%) hue-rotate(85deg) brightness(99%) contrast(89%);
         }
@@ -151,7 +148,7 @@
 <body>
 
     <div class="toolbar">
-        <div class="toolbar-title">Beschriftung V22</div>
+        <div class="toolbar-title">Beschriftung V22.1</div>
         <button class="btn-success" onclick="app.addPanel()">
             <img src="icons/Plus.svg"> Panel
         </button>
@@ -516,8 +513,9 @@
             return BASE_COLOR_OPTIONS;
         }
 
+        // Sicherer Symbol-Renderer (fängt invalide Typen ab)
         function renderSymbol(sym) {
-            if (!sym || sym === '--') return '';
+            if (!sym || sym === '--' || typeof sym !== 'string') return '';
             if (sym.endsWith('.svg')) {
                 return `<span style="display: inline-block; width: 1.1em; height: 1.1em; background-color: currentColor; -webkit-mask: url('icons/${sym}') no-repeat center / contain; mask: url('icons/${sym}') no-repeat center / contain; vertical-align: middle; flex-shrink: 0;"></span>`;
             }
@@ -551,17 +549,28 @@
                 const btn = document.createElement('div');
                 btn.className = 'custom-select-btn';
                 
-                // Hilfsfunktion zum Setzen von Button-Inhalt (Icon + Text)
+                // Extrem sichere Update-Funktion
                 const updateBtnContent = (val, text) => {
-                    if (val && val !== '--' && val.endsWith('.svg')) {
+                    if (val && val !== '--' && typeof val === 'string' && val.endsWith('.svg')) {
                         btn.innerHTML = renderSymbol(val) + `<span>${text}</span>`;
                     } else {
-                        btn.innerHTML = text;
+                        btn.innerHTML = text || '';
                     }
                 };
 
-                const selectedOpt = selectElement.options[selectElement.selectedIndex];
-                updateBtnContent(selectedOpt?.value, selectedOpt?.text || '-- Nichts --');
+                // Sicherer Fallback für selectedIndex (ohne modernem ?.-Operator für alte Browser!)
+                let optVal = null;
+                let optText = '-- Nichts --';
+                
+                if (selectElement.options && selectElement.options.length > 0 && selectElement.selectedIndex >= 0) {
+                    const selectedOpt = selectElement.options[selectElement.selectedIndex];
+                    if (selectedOpt) {
+                        optVal = selectedOpt.value;
+                        optText = selectedOpt.text;
+                    }
+                }
+                
+                updateBtnContent(optVal, optText);
 
                 wrapper.appendChild(btn);
 
@@ -589,7 +598,8 @@
                     const listDiv = document.createElement('div');
                     menu.appendChild(listDiv);
 
-                    function renderList(filter = '') {
+                    function renderList(filter) {
+                        if (!filter) filter = '';
                         listDiv.innerHTML = '';
                         for (const [category, symbols] of Object.entries(groupedSymbols)) {
                             const filteredSyms = symbols.filter(s => s.name.toLowerCase().includes(filter) || s.val.toLowerCase().includes(filter));
@@ -604,8 +614,8 @@
                                     const opt = document.createElement('div');
                                     opt.className = 'custom-option';
                                     
-                                    // Zeige SVG direkt im Menü an, wenn vorhanden
-                                    if (s.val !== '--' && s.val.endsWith('.svg')) {
+                                    // Zeige SVG direkt im Menü an, mit Typ-Sicherung
+                                    if (s.val !== '--' && typeof s.val === 'string' && s.val.endsWith('.svg')) {
                                         opt.innerHTML = renderSymbol(s.val) + `<span>${s.name}</span>`;
                                     } else {
                                         opt.innerHTML = s.name;
@@ -623,7 +633,7 @@
                             }
                         }
                     }
-                    renderList();
+                    renderList('');
 
                     searchInput.oninput = (ev) => renderList(ev.target.value.toLowerCase());
                     searchInput.onclick = (ev) => ev.stopPropagation();
@@ -644,7 +654,6 @@
                     document.body.appendChild(menu);
                     activeCustomMenu = menu;
 
-                    // Exakte Positionierung auf dem Bildschirm (damit es beim Scrollen nicht abgeschnitten wird)
                     const rect = btn.getBoundingClientRect();
                     menu.style.top = (rect.bottom + window.scrollY + 2) + 'px';
                     menu.style.left = rect.left + 'px';
